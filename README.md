@@ -3,7 +3,8 @@
 <p align="center">
   <img src="logo/pandamap-logo.svg" alt="PandaMap-Color Logo" width="400">
 </p>
-## Overview
+
+# Overview
 
 PandaMap-Color is a powerful Python package for visualizing protein-ligand interactions in 2D with customizable color schemes. Generate publication-quality interaction diagrams directly from PDB files with minimal configuration.
 
