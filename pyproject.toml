@@ -1,0 +1,65 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pandamap-color"
+version = "1.0.0"
+description = "Versatile visualization tool for protein-ligand interactions with customizable color schemes"
+readme = "README.md"
+authors = [{name = "Pritam Kumar Panda", email = "pritam@stanford.edu"}]
+license = {text = "MIT"}
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "Topic :: Scientific/Engineering :: Visualization",
+]
+keywords = [
+    "protein", 
+    "ligand", 
+    "visualization", 
+    "bioinformatics", 
+    "structural biology", 
+    "color schemes", 
+    "drug design", 
+    "molecular interactions"
+]
+dependencies = [
+    "numpy>=1.20.0",
+    "matplotlib>=3.5.0",
+    "biopython>=1.79",
+    "pillow>=9.0.0",
+    "scipy>=1.7.0",
+    "pandas>=1.3.0"
+]
+requires-python = ">=3.7"
+
+[project.urls]
+"Homepage" = "https://github.com/pritampanda15/PandaMap-Color"
+"Bug Tracker" = "https://github.com/pritampanda15/PandaMap-Color/issues"
+"Documentation" = "https://github.com/pritampanda15/PandaMap-Color/docs"
+
+[project.scripts]
+pandamap-color = "pandamap_color.cli:main"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["pandamap_color*"]
+
+[tool.setuptools.package-data]
+"pandamap_color.examples" = ["*.pdb", "*.png"]
+"pandamap_color" = ["*.json", "pandamap-logo.svg"]
+
+[tool.long_description]
+long-description = "file:README.md"
+long-description-content-type = "text/markdown"

@@ -1,0 +1,12 @@
+# Core dependencies
+numpy>=1.20.0
+matplotlib>=3.5.0
+biopython>=1.79
+
+# Dependencies for visualization enhancements
+pillow>=9.0.0  # For image output handling
+
+# Development dependencies (optional)
+pytest>=7.0.0  # For running tests
+black>=22.0.0  # Code formatting
+flake8>=4.0.0  # Linting

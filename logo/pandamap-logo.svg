@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 400" width="500" height="400">
+  <!-- Background -->
+  <rect width="500" height="400" fill="#ffffff" rx="20" ry="20"/>
+  
+  <!-- Protein-ligand background -->
+  <circle cx="250" cy="180" r="130" fill="#E6F7FF" opacity="0.5"/>
+  
+  <!-- Panda face base -->
+  <circle cx="250" cy="180" r="110" fill="#FFFFFF" stroke="#333333" stroke-width="2"/>
+  
+  <!-- Panda ears -->
+  <circle cx="175" cy="100" r="40" fill="#333333"/>
+  <circle cx="325" cy="100" r="40" fill="#333333"/>
+  
+  <!-- Panda eyes -->
+  <ellipse cx="200" cy="160" rx="30" ry="35" fill="#333333"/>
+  <ellipse cx="300" cy="160" rx="30" ry="35" fill="#333333"/>
+  
+  <!-- Eye highlights -->
+  <circle cx="190" cy="150" r="8" fill="#FFFFFF"/>
+  <circle cx="290" cy="150" r="8" fill="#FFFFFF"/>
+  
+  <!-- Panda nose -->
+  <ellipse cx="250" cy="200" rx="25" ry="15" fill="#333333"/>
+  
+  <!-- Molecular bonds/connections - Hydrogen bond (green) -->
+  <path d="M250 280 L250 320" stroke="#2E8B57" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="250" cy="300" r="10" fill="#E0FFE0" stroke="#2E8B57" stroke-width="1.5"/>
+  <text x="250" y="303" text-anchor="middle" font-family="Arial" font-size="12" font-weight="bold" fill="#2E8B57">H</text>
+  
+  <!-- Pi-pi stacking (purple) -->
+  <path d="M180 250 L140 280" stroke="#8A2BE2" stroke-width="3" stroke-dasharray="5,5" stroke-linecap="round"/>
+  <polygon points="150,280 170,270 170,290" fill="#F5E1FF" stroke="#8A2BE2" stroke-width="1.5"/>
+  <text x="160" y="283" text-anchor="middle" font-family="Arial" font-size="10" font-weight="bold" fill="#8A2BE2">π-π</text>
+  
+  <!-- Carbon-Pi interaction (gray) -->
+  <path d="M320 250 L360 280" stroke="#4B4B4B" stroke-width="3" stroke-dasharray="5,5" stroke-linecap="round"/>
+  <polygon points="350,280 330,270 330,290" fill="#F8F8F8" stroke="#4B4B4B" stroke-width="1.5"/>
+  <text x="340" y="283" text-anchor="middle" font-family="Arial" font-size="10" font-weight="bold" fill="#4B4B4B">C-π</text>
+  
+  <!-- Add molecular structure in background -->
+  <circle cx="200" cy="220" r="6" fill="#444444" opacity="0.7"/>
+  <circle cx="230" cy="240" r="6" fill="#444444" opacity="0.7"/>
+  <circle cx="270" cy="240" r="6" fill="#444444" opacity="0.7"/>
+  <circle cx="300" cy="220" r="6" fill="#444444" opacity="0.7"/>
+  
+  <line x1="200" y1="220" x2="230" y2="240" stroke="#444444" stroke-width="2" opacity="0.7"/>
+  <line x1="230" y1="240" x2="270" y2="240" stroke="#444444" stroke-width="2" opacity="0.7"/>
+  <line x1="270" y1="240" x2="300" y2="220" stroke="#444444" stroke-width="2" opacity="0.7"/>
+  
+  <!-- Logo text -->
+  <text x="250" y="365" text-anchor="middle" font-family="Arial" font-size="40" font-weight="bold">
+    <tspan fill="#333333">PandaMap</tspan>
+    <tspan fill="url(#gradient)">-color</tspan>
+  </text>
+  
+  <!-- Gradient for "color" text -->
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#2E8B57" />
+      <stop offset="50%" stop-color="#8A2BE2" />
+      <stop offset="100%" stop-color="#4B4B4B" />
+    </linearGradient>
+  </defs>
+</svg>
