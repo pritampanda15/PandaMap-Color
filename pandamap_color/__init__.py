@@ -2,7 +2,7 @@
 PandaMap-Color: Protein-Ligand Interaction Mapper with customizable color schemes
 """
 
-__version__ = "1.0.0"
+__version__ = "2.0.0"
 __author__ = "Pritam Kumar Panda"
 
 # Import main components so they're available directly from the package

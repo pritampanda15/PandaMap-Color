@@ -1,7 +1,7 @@
 # PandaMap-Color: A versatile tool for protein-ligand interaction visualization with customizable color schemes.
 
 <p align="center">
-  <img src="logo/pandamap-logo.svg" alt="PandaMap-Color Logo" width="400">
+  <img src="https://github.com/pritampanda15/PandaMap-Color/blob/main/logo/pandamap-logo.svg" alt="PandaMap-Color Logo" width="400">
 </p>
 
 # Overview
@@ -106,23 +106,27 @@ mapper.visualize(output_file="interaction_diagram.png")
 
 ## Examples
 
-### Dark Style
-![Dark Style Example](examples/dark.png)
-
-### Default Style
-![Default Style Example](examples/default.png)
-
-### Colorblind-Friendly Style
-![Colorblind Style Example](examples/colorblind.png)
 
 ### Monochrome Mode
-![Dark Mode Example](examples/monochrome.png)
+![Dark Mode Example](https://github.com/pritampanda15/PandaMap-Color/blob/main/examples/monochrome.png)
+
+### Dark Style
+![Dark Style Example](https://github.com/pritampanda15/PandaMap-Color/blob/main/examples/dark.png)
+
+### Default Style
+![Default Style Example](https://github.com/pritampanda15/PandaMap-Color/blob/main/examples/default.png)
+
+### Colorblind-Friendly Style
+![Colorblind Style Example](https://github.com/pritampanda15/PandaMap-Color/blob/main/examples/colorblind.png)
 
 ### Publication Mode
-![Dark Mode Example](examples/publication.png)
+![Dark Mode Example](https://github.com/pritampanda15/PandaMap-Color/blob/main/examples/publication.png)
 
 ### No Color By Type Mode
-![Dark Mode Example](examples/nocolorbytype.png)
+![Dark Mode Example](https://github.com/pritampanda15/PandaMap-Color/blob/main/examples/nocolorbytype.png)
+
+### No Color By Type Mode
+![Jitter Example](https://github.com/pritampanda15/PandaMap-Color/blob/main/examples/jitter.png)
 
 ## Available Color Schemes
 

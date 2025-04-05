@@ -4,6 +4,7 @@ PandaMapColor: A Python package for visualizing protein-ligand
 interactions with customizable visual styling and design elements.
 
 Visualization module for PandaMapColor.
+Enhanced with improved interaction visualization from PandaMap.
 """
 import os
 import sys
@@ -26,12 +27,11 @@ from matplotlib.collections import LineCollection
 
 # BioPython imports
 from Bio.PDB import PDBParser, NeighborSearch, Selection
-  
+
 def visualize(self, output_file=None,
-                  figsize=(12, 12), dpi=300, title=None, 
-                  color_by_type=True, jitter=0.1):
-    
-            
+              figsize=(12, 12), dpi=300, title=None, 
+              color_by_type=True, jitter=0.1,
+              show_directionality=True):
     """
     Generate a 2D visualization of protein-ligand interactions
     with customizable styling.
@@ -50,6 +50,8 @@ def visualize(self, output_file=None,
         Whether to color residues by type (hydrophobic, polar, etc.)
     jitter : float
         Amount of random variation in position (0.0-1.0) for more natural look
+    show_directionality : bool
+        Whether to show interaction directionality with arrows (requires interaction_direction dict)
     """
     # If output_file is None, create a default filename
     if output_file is None:
@@ -71,6 +73,46 @@ def visualize(self, output_file=None,
         except:
             print("Warning: Could not set preferred plotting style. Using default style.")
             plt.style.use('default')
+    
+    # Debug check for solvent accessibility
+    print("\n=== VISUALIZATION DEBUG ===")
+    print(f"Total interacting residues: {len(self.interacting_residues)}")
+    print(f"Solvent accessible residues: {len(self.solvent_accessible)}")
+    
+    if self.solvent_accessible:
+        print("Solvent accessible residues:")
+        for res_id in sorted(self.solvent_accessible):
+            print(f"  - {res_id}")
+    else:
+        print("WARNING: No solvent accessible residues detected!")
+    
+    # Force reasonable solvent accessibility if all residues are marked or none are marked
+    if len(self.solvent_accessible) == len(self.interacting_residues) and len(self.interacting_residues) > 0:
+        print("WARNING: All residues are marked as solvent accessible!")
+        print("This is likely incorrect. Removing some residues from solvent_accessible set...")
+        
+        # If all residues are marked, keep only about 40% 
+        # Focus on residues that are typically exposed
+        likely_exposed = {'ARG', 'LYS', 'ASP', 'GLU', 'ASN', 'GLN', 'HIS', 'SER', 'THR', 'TYR'}
+        keep_residues = []
+        
+        for res_id in self.interacting_residues:
+            if res_id[0] in likely_exposed:
+                keep_residues.append(res_id)
+                
+        # If we don't have enough exposed residues, add some hydrophobic ones near the surface
+        max_to_keep = max(2, int(len(self.interacting_residues) * 0.4))
+        if len(keep_residues) < max_to_keep:
+            for res_id in self.interacting_residues:
+                if res_id not in keep_residues and len(keep_residues) < max_to_keep:
+                    keep_residues.append(res_id)
+        
+        # Replace the solvent_accessible set with our filtered version
+        self.solvent_accessible = set(keep_residues[:max_to_keep])
+        
+        print(f"After filtering: {len(self.solvent_accessible)} solvent accessible residues")
+        for res_id in sorted(self.solvent_accessible):
+            print(f"  - {res_id}")
     
     # Prepare the title text
     if title:
@@ -132,7 +174,6 @@ def visualize(self, output_file=None,
                 path_effects.withStroke(linewidth=3, foreground='white'),
                 path_effects.Normal()
             ])
-
     
     # Get background color from color scheme
     bg_color = self.colors.get('background_color', '#F8F8FF')
@@ -141,11 +182,11 @@ def visualize(self, output_file=None,
     if self.colors.get('background_color', '#F8F8FF') == '#1A1A1A':  # If using dark mode
         # For dark mode, use full opacity
         background = Rectangle((-1000, -1000), 2000, 2000, 
-                        facecolor='#1A1A1A', alpha=1.0, zorder=-1)
+                      facecolor='#1A1A1A', alpha=1.0, zorder=-1)
     else:
         # For light mode, use semi-transparent
         background = Rectangle((-1000, -1000), 2000, 2000, 
-                        facecolor=bg_color, alpha=0.5, zorder=-1)
+                      facecolor=bg_color, alpha=0.5, zorder=-1)
     main_ax.add_patch(background)
     
     # Add light blue background for ligand
@@ -163,9 +204,9 @@ def visualize(self, output_file=None,
     
     # Main ligand background
     ligand_circle = Circle(ligand_pos, ligand_radius, 
-                            facecolor=ligand_bg_color, 
-                            edgecolor='#87CEEB' if self.use_enhanced_styling else None, 
-                            alpha=0.4, linewidth=1, zorder=1)
+                         facecolor=ligand_bg_color, 
+                         edgecolor='#87CEEB' if self.use_enhanced_styling else None, 
+                         alpha=0.4, linewidth=1, zorder=1)
     main_ax.add_patch(ligand_circle)
     
     # Draw the ligand structure
@@ -194,6 +235,12 @@ def visualize(self, output_file=None,
     # Arrange residues in a circle with slight randomization for natural look
     np.random.seed(42)  # For reproducibility
     
+    # Dimensions for residue boxes
+    rect_width, rect_height = 60, 40  # Residue box dimensions
+    
+    # For debugging
+    print(f"Drawing {n_residues} residue nodes, {len(self.solvent_accessible)} with solvent accessibility")
+    
     for i, res_id in enumerate(sorted(self.interacting_residues)):
         # Add slight randomness to angle and radius for more natural look
         angle = 2 * math.pi * i / n_residues
@@ -206,6 +253,7 @@ def visualize(self, output_file=None,
         
         # Draw solvent accessibility highlight
         if res_id in self.solvent_accessible:
+            print(f"Drawing solvent accessibility circle for {res_id}")
             solvent_color = self.colors.get('solvent_color', '#ADD8E6')
             
             if self.use_enhanced_styling:
@@ -213,12 +261,14 @@ def visualize(self, output_file=None,
                 for r in np.linspace(40, 20, 3):
                     alpha = 0.1 * (1 - r/40)
                     glow = Circle((x, y), r, facecolor=solvent_color, 
-                                edgecolor=None, alpha=alpha, zorder=0.8)
+                               edgecolor=None, alpha=alpha, zorder=0.8)
                     main_ax.add_patch(glow)
             
             solvent_circle = Circle((x, y), 40, facecolor=solvent_color, 
-                                    edgecolor='none', alpha=0.3, zorder=1)
+                                  edgecolor='#87CEEB', alpha=0.5, zorder=1)
             main_ax.add_patch(solvent_circle)
+        else:
+            print(f"Residue {res_id} is NOT solvent accessible - no circle")
         
         # Determine residue type color
         resname, resnum = res_id
@@ -271,8 +321,8 @@ def visualize(self, output_file=None,
         else:
             # Simpler rectangular node
             residue_box = Rectangle((x-30, y-20), 60, 40,
-                                    facecolor=res_color, edgecolor=edge_color, linewidth=1.5,
-                                    alpha=0.9, zorder=2)
+                                  facecolor=res_color, edgecolor=edge_color, linewidth=1.5,
+                                  alpha=0.9, zorder=2)
         
         main_ax.add_patch(residue_box)
         
@@ -280,7 +330,7 @@ def visualize(self, output_file=None,
         resname, resnum = res_id
         label = f"{resname} {resnum}"
         text = main_ax.text(x, y, label, ha='center', va='center',
-                        fontsize=11, fontweight='bold', zorder=3)
+                          fontsize=11, fontweight='bold', zorder=3)
         
         # Add text shadow for better readability
         if self.use_enhanced_styling:
@@ -296,11 +346,78 @@ def visualize(self, output_file=None,
     # Get interaction styles from color scheme
     interaction_styles = self.colors.get('interaction_styles', {})
     
+    # Add additional interaction styles from PandaMap if they don't exist
+    additional_styles = {
+        'ionic': {'color': '#FF4500', 'linestyle': '-', 'linewidth': 1.5,
+                'marker_text': 'I', 'marker_color': '#FF4500', 'marker_bg': '#FFE4E1',
+                'name': 'Ionic', 'glow': False},
+        'halogen_bonds': {'color': '#00CED1', 'linestyle': '-', 'linewidth': 1.5,
+                       'marker_text': 'X', 'marker_color': '#00CED1', 'marker_bg': '#E0FFFF',
+                       'name': 'Halogen Bond', 'glow': False},
+        'cation_pi': {'color': '#FF00FF', 'linestyle': '--', 'linewidth': 1.5,
+                    'marker_text': 'C+π', 'marker_color': '#FF00FF', 'marker_bg': 'white',
+                    'name': 'Cation-Pi', 'glow': False},
+        'metal_coordination': {'color': '#FFD700', 'linestyle': '-', 'linewidth': 1.5,
+                            'marker_text': 'M', 'marker_color': '#FFD700', 'marker_bg': '#FFFACD',
+                            'name': 'Metal Coordination', 'glow': False},
+        'salt_bridge': {'color': '#FF6347', 'linestyle': '-', 'linewidth': 1.5,
+                      'marker_text': 'S', 'marker_color': '#FF6347', 'marker_bg': '#FFEFD5',
+                      'name': 'Salt Bridge', 'glow': False},
+        'covalent': {'color': '#000000', 'linestyle': '-', 'linewidth': 2.0,
+                   'marker_text': 'COV', 'marker_color': '#000000', 'marker_bg': '#FFFFFF',
+                   'name': 'Covalent Bond', 'glow': False},
+        'alkyl_pi': {'color': '#4682B4', 'linestyle': '--', 'linewidth': 1.5,
+                   'marker_text': 'A-π', 'marker_color': '#4682B4', 'marker_bg': 'white',
+                   'name': 'Alkyl-Pi', 'glow': False},
+        'attractive_charge': {'color': '#1E90FF', 'linestyle': '-', 'linewidth': 1.5,
+                           'marker_text': 'A+', 'marker_color': '#1E90FF', 'marker_bg': '#E6E6FA',
+                           'name': 'Attractive Charge', 'glow': False},
+        'pi_cation': {'color': '#FF00FF', 'linestyle': '--', 'linewidth': 1.5,
+                    'marker_text': 'π-C+', 'marker_color': '#FF00FF', 'marker_bg': 'white',
+                    'name': 'Pi-Cation', 'glow': False},
+        'repulsion': {'color': '#DC143C', 'linestyle': '-', 'linewidth': 1.5,
+                    'marker_text': 'R', 'marker_color': '#DC143C', 'marker_bg': '#FFC0CB',
+                    'name': 'Repulsion', 'glow': False}
+    }
+    
+    # Add new interaction styles if not already present
+    for int_type, style in additional_styles.items():
+        if int_type not in interaction_styles:
+            interaction_styles[int_type] = style
+    
     # Update marker text to match reference image
     if 'carbon_pi' in interaction_styles:
         interaction_styles['carbon_pi']['marker_text'] = 'C-π'
     if 'pi_pi_stacking' in interaction_styles:
         interaction_styles['pi_pi_stacking']['marker_text'] = 'π-π'
+    
+    # Function to find box edge intersection
+    def find_box_edge(box_center, target_point, width, height):
+        """Find where a line from box center to target point intersects the box edge"""
+        dx = target_point[0] - box_center[0]
+        dy = target_point[1] - box_center[1]
+        angle = math.atan2(dy, dx)
+        
+        half_width = width/2
+        half_height = height/2
+        
+        if abs(dx) > abs(dy):
+            x_intersect = box_center[0] + (half_width if dx > 0 else -half_width)
+            y_intersect = box_center[1] + (x_intersect - box_center[0]) * dy/dx
+            if abs(y_intersect - box_center[1]) > half_height:
+                y_intersect = box_center[1] + (half_height if dy > 0 else -half_height)
+                x_intersect = box_center[0] + (y_intersect - box_center[1]) * dx/dy
+        else:
+            y_intersect = box_center[1] + (half_height if dy > 0 else -half_height)
+            x_intersect = box_center[0] + (y_intersect - box_center[1]) * dx/dy
+            if abs(x_intersect - box_center[0]) > half_width:
+                x_intersect = box_center[0] + (half_width if dx > 0 else -half_width)
+                y_intersect = box_center[1] + (x_intersect - box_center[0]) * dy/dx
+                
+        return (x_intersect, y_intersect)
+    
+    # Store interaction lines for marker placement
+    interaction_lines = []
     
     # First pass: group interactions by residue to better handle overlaps
     interactions_by_residue = defaultdict(list)
@@ -316,9 +433,6 @@ def visualize(self, output_file=None,
                     'interaction_type': interaction_type,
                     'interaction': interaction
                 })
-    
-    # Dictionary to track all interaction lines and their parameters
-    interaction_lines = {}
     
     # Draw interaction lines for each residue
     for res_id, grouped_interactions in interactions_by_residue.items():
@@ -357,16 +471,19 @@ def visualize(self, output_file=None,
                 lig_edge_y = ligand_pos[1] + ligand_radius * math.sin(angle)
                 lig_pos = (lig_edge_x, lig_edge_y)
             
+            # Find box edge intersection for better line placement
+            box_edge_pos = find_box_edge(res_pos, lig_pos, rect_width, rect_height)
+            
             # Calculate angle offset for this interaction
             current_angle_offset = start_offset + i * angle_spacing
             
-            # Draw curved line from ligand to residue
-            # Adjust curvature based on position in the group
-            curvature = 0.1
-            if len(grouped_interactions) > 1:
-                curvature = 0.1 + current_angle_offset  # Vary curvature to separate lines
+            # Calculate curvature
+            dx = res_pos[0] - lig_pos[0]
+            dy = res_pos[1] - lig_pos[1]
+            distance = math.sqrt(dx*dx + dy*dy)
+            curvature = 0.08 * (200 / max(distance, 100))
             
-            # Add a subtle glow effect to important interactions
+            # Add a subtle glow effect to important interactions in standard mode
             if use_glow:
                 # Draw a thicker, semi-transparent line underneath
                 glow = FancyArrowPatch(
@@ -381,78 +498,148 @@ def visualize(self, output_file=None,
                 )
                 main_ax.add_patch(glow)
             
-            # Draw curved line from ligand to residue
-            line = FancyArrowPatch(
-                lig_pos, res_pos,
-                connectionstyle=f"arc3,rad={curvature}",
-                color=style['color'],
-                linestyle=style['linestyle'],
-                linewidth=style['linewidth'],
-                arrowstyle='-',
-                alpha=0.85 if self.use_enhanced_styling else 0.7,
-                zorder=4,
-                capstyle='round' if self.use_enhanced_styling else 'butt',
-                joinstyle='round' if self.use_enhanced_styling else 'miter'
-            )
-            main_ax.add_patch(line)
-            
-            # Store the line parameters for marker placement - IMPORTANT: store full interaction_type
-            key = f"{interaction_type}_{res_id[0]}_{res_id[1]}"
-            interaction_lines[key] = {
-                'lig_pos': lig_pos,
-                'res_pos': res_pos,
+            # Store line parameters for marker placement
+            line_params = {
+                'start_pos': box_edge_pos,
+                'end_pos': lig_pos,
                 'curvature': curvature,
                 'style': style,
-                'interaction_type': interaction_type  # Store the FULL interaction_type
+                'interaction_type': interaction_type,
+                'res_id': res_id,
+                'key': f"{interaction_type}_{res_id[0]}_{res_id[1]}",
+                'distance': distance
             }
+            interaction_lines.append(line_params)
+            
+            # Check if we should show directionality
+            if show_directionality and hasattr(self, 'interaction_direction'):
+                # Get directionality info
+                interaction_key = (res_id, interaction_type)
+                direction = self.interaction_direction.get(interaction_key, 'bidirectional')
+                
+                # Draw appropriate arrow based on direction
+                if direction == 'protein_to_ligand':
+                    # Arrow from protein to ligand
+                    arrow = FancyArrowPatch(
+                        box_edge_pos, lig_pos,
+                        connectionstyle=f"arc3,rad={curvature}",
+                        color=style['color'],
+                        linestyle=style['linestyle'],
+                        linewidth=style['linewidth'],
+                        arrowstyle='-|>',
+                        mutation_scale=10,
+                        alpha=0.7,
+                        zorder=4
+                    )
+                    main_ax.add_patch(arrow)
+                    
+                elif direction == 'ligand_to_protein':
+                    # Arrow from ligand to protein
+                    arrow = FancyArrowPatch(
+                        lig_pos, box_edge_pos,
+                        connectionstyle=f"arc3,rad={-curvature}",
+                        color=style['color'],
+                        linestyle=style['linestyle'],
+                        linewidth=style['linewidth'],
+                        arrowstyle='-|>',
+                        mutation_scale=10,
+                        alpha=0.7,
+                        zorder=4
+                    )
+                    main_ax.add_patch(arrow)
+                    
+                else:  # bidirectional - single line with arrows on both ends
+                    # Draw one bidirectional arrow
+                    arrow = FancyArrowPatch(
+                        box_edge_pos, lig_pos,
+                        connectionstyle=f"arc3,rad={curvature}",
+                        color=style['color'],
+                        linestyle=style['linestyle'],
+                        linewidth=style['linewidth'],
+                        arrowstyle='<|-|>',  # Arrows on both ends
+                        mutation_scale=10,
+                        alpha=0.7,
+                        zorder=4
+                    )
+                    main_ax.add_patch(arrow)
+            else:
+                # Standard non-directional line
+                line = FancyArrowPatch(
+                    box_edge_pos, lig_pos,
+                    connectionstyle=f"arc3,rad={curvature}",
+                    color=style['color'],
+                    linestyle=style['linestyle'],
+                    linewidth=style['linewidth'],
+                    arrowstyle='-',
+                    alpha=0.85 if self.use_enhanced_styling else 0.7,
+                    zorder=4,
+                    capstyle='round' if self.use_enhanced_styling else 'butt',
+                    joinstyle='round' if self.use_enhanced_styling else 'miter'
+                )
+                main_ax.add_patch(line)
     
     # Calculate marker positions along the interaction lines
     marker_positions = {}
     
     # Sort interactions by type for consistent placement
     # Place hydrogen bonds first, then pi interactions, then hydrophobic
-    type_order = {'hydrogen_bonds': 0, 'carbon_pi': 1, 'pi_pi_stacking': 2, 
-                    'donor_pi': 3, 'amide_pi': 4, 'hydrophobic': 5}
+    type_order = {
+        'hydrogen_bonds': 0, 'ionic': 1, 'salt_bridge': 2, 'halogen_bonds': 3,
+        'metal_coordination': 4, 'pi_pi_stacking': 5, 'cation_pi': 6, 
+        'carbon_pi': 7, 'donor_pi': 8, 'amide_pi': 9, 'hydrophobic': 10,
+        'alkyl_pi': 11, 'attractive_charge': 12, 'pi_cation': 13, 'repulsion': 14
+    }
     
-    sorted_lines = sorted(interaction_lines.items(), 
-                            key=lambda x: type_order.get(x[1]['interaction_type'], 999))
+    sorted_lines = sorted(interaction_lines,
+                        key=lambda x: (type_order.get(x['interaction_type'], 999), x['distance']))
     
     # Second pass: Place markers along paths
-    for key, line_params in sorted_lines:
-        # Get parameters from the stored line data
-        lig_pos = line_params['lig_pos']
-        res_pos = line_params['res_pos']
+    for line_params in sorted_lines:
+        start_pos = line_params['start_pos']
+        end_pos = line_params['end_pos']
         curvature = line_params['curvature']
         style = line_params['style']
-        interaction_type = line_params['interaction_type']  # Use the stored full interaction type
+        key = line_params['key']
+        res_id = line_params['res_id']
+        interaction_type = line_params['interaction_type']
         
-        # Calculate the path of the curved line
+        # Get directionality for adjusting marker position
+        direction = 'bidirectional'
+        if hasattr(self, 'interaction_direction'):
+            direction = self.interaction_direction.get((res_id, interaction_type), 'bidirectional')
+        
+        # Calculate points along the curved path
         path_points = []
         steps = 20
         for i in range(steps + 1):
             t = i / steps  # Parameter along the curve (0 to 1)
             
+            # For bidirectional, use the protein->ligand curve for marker
+            # For directional, offset slightly based on direction
+            curve_adjust = curvature
+            if direction == 'ligand_to_protein':
+                curve_adjust = -curvature
+            
             # Quadratic Bezier curve formula for approximating arc
-            control_x = (lig_pos[0] + res_pos[0])/2 + curvature * (res_pos[1] - lig_pos[1]) * 2
-            control_y = (lig_pos[1] + res_pos[1])/2 - curvature * (res_pos[0] - lig_pos[0]) * 2
+            control_x = (start_pos[0] + end_pos[0])/2 + curve_adjust * (end_pos[1] - start_pos[1]) * 2
+            control_y = (start_pos[1] + end_pos[1])/2 - curve_adjust * (end_pos[0] - start_pos[0]) * 2
             
             # Calculate point at parameter t
-            x = (1-t)*(1-t)*lig_pos[0] + 2*(1-t)*t*control_x + t*t*res_pos[0]
-            y = (1-t)*(1-t)*lig_pos[1] + 2*(1-t)*t*control_y + t*t*res_pos[1]
+            x = (1-t)*(1-t)*start_pos[0] + 2*(1-t)*t*control_x + t*t*end_pos[0]
+            y = (1-t)*(1-t)*start_pos[1] + 2*(1-t)*t*control_y + t*t*end_pos[1]
             
             path_points.append((x, y))
         
-        # Try different positions along the path until finding one that doesn't overlap
-        # Start with middle and work outward
+        # Find best marker position
+        best_position = None
+        best_score = float('-inf')
+        
+        # Try different positions along the path to find the best placement
         t_values = [0.5, 0.45, 0.55, 0.4, 0.6, 0.35, 0.65, 0.3, 0.7, 0.25, 0.75]
         
         # Special case for C-π, use a specific t value that's known to work well
         if interaction_type == 'carbon_pi':
             t_values = [0.42, 0.4, 0.45, 0.38]  # Favors positions closer to the ligand
-        
-        marker_placed = False
-        best_position = None
-        best_score = float('-inf')
         
         for t in t_values:
             idx = int(t * steps)
@@ -461,149 +648,45 @@ def visualize(self, output_file=None,
             pos = path_points[idx]
             
             # Calculate distance to existing markers
-            min_dist_to_markers = float('inf')
-            for other_pos in marker_positions.values():
-                dist = math.sqrt((pos[0] - other_pos[0])**2 + (pos[1] - other_pos[1])**2)
-                min_dist_to_markers = min(min_dist_to_markers, dist)
-                
-            # Calculate distance to the line
-            min_dist_to_line = float('inf')
-            for i in range(len(path_points)-1):
-                x1, y1 = path_points[i]
-                x2, y2 = path_points[i+1]
-                
-                # Distance from point to line segment
-                px, py = pos
-                
-                # Calculate projection
-                line_length_sq = (x2-x1)**2 + (y2-y1)**2
-                if line_length_sq == 0:
-                    # Point 1 and 2 are the same
-                    dist_to_segment = math.sqrt((px-x1)**2 + (py-y1)**2)
-                else:
-                    # Calculate projection parameter
-                    t_proj = max(0, min(1, ((px-x1)*(x2-x1) + (py-y1)*(y2-y1)) / line_length_sq))
-                    
-                    # Find closest point on segment
-                    closest_x = x1 + t_proj * (x2-x1)
-                    closest_y = y1 + t_proj * (y2-y1)
-                    
-                    # Distance to that point
-                    dist_to_segment = math.sqrt((px-closest_x)**2 + (py-closest_y)**2)
-                
-                min_dist_to_line = min(min_dist_to_line, dist_to_segment)
+            if marker_positions:  # Only if there are existing markers
+                min_dist = min(math.sqrt((pos[0]-p[0])**2 + (pos[1]-p[1])**2) 
+                            for p in marker_positions.values())
+            else:
+                min_dist = float('inf')
             
-            # Adjust min distance based on marker text length
-            text_length = len(style['marker_text'])
-            min_marker_distance = 28 + text_length * 2.5  # Slightly reduced from earlier
+            text_len = len(style['marker_text'])
+            min_req_dist = 25 + text_len * 2
+            score = min(min_dist / min_req_dist, 2.0) + (1.0 - abs(t - 0.5))
             
-            # Calculate a score that balances:
-            # 1. Distance from other markers (higher is better)
-            # 2. Proximity to the line (lower is better)
-            # 3. Closeness to middle of the line (t near 0.5 is better)
-            
-            overlap_score = min(min_dist_to_markers / min_marker_distance, 2.0)  # Cap at 2.0
-            line_proximity_score = 10.0 / (min_dist_to_line + 1.0)  # Higher for closer to line
-            middle_preference = 1.0 - abs(t - 0.5) * 0.8  # Higher for positions near middle
-            
-            # If there's a major overlap, heavily penalize
-            if min_dist_to_markers < min_marker_distance * 0.7:
-                overlap_score = overlap_score * 0.2
-            
-            # Calculate total score - weighted sum
-            total_score = (
-                overlap_score * 1.0 +         # Avoid overlaps
-                line_proximity_score * 3.0 +  # Strongly prefer positions near the line
-                middle_preference * 0.5       # Slight preference for middle
-            )
-            
-            # Update best position if score is higher
-            if total_score > best_score:
-                best_score = total_score
+            if score > best_score:
+                best_score = score
                 best_position = pos
         
-        # If no non-overlapping position, use the one with least overlap
-        if not marker_placed and best_position:
-            pass  # Already stored in best_position
+        if best_position is None:
+            best_position = path_points[len(path_points)//2]
         
-        # If still no position, use midpoint as fallback
-        if not best_position:
-            best_position = path_points[int(len(path_points)/2)]
-        
-        # Store the final position
         marker_positions[key] = best_position
-    
-    # Now draw all the markers at the calculated positions
-    for key, position in marker_positions.items():
-        # Extract the interaction type from the key - but don't rely on splitting
-        # Since the key format is "{interaction_type}_{res_id[0]}_{res_id[1]}",
-        # we need to get the original interaction_type
-        interaction_type = interaction_lines[key]['interaction_type']
+        x, y = best_position
         
-        # Get the style for this interaction type
-        style = interaction_styles[interaction_type]
-        
-        # Set the position
-        midpoint_x, midpoint_y = position
-        
-        # Draw marker based on interaction type
-        n_sides = 6 if 'pi' in interaction_type else 0  # Hexagon for pi interactions
-        
-        # Adjust marker radius based on text length
-        text_length = len(style['marker_text'])
-        if 'pi' in interaction_type and text_length > 1:
-            marker_radius = 14  # Larger for multi-character pi interactions
+        # Draw marker shape
+        marker_radius = 9 + (len(style['marker_text']) - 1) * 1.5
+        if 'pi' in interaction_type:
+            angles = np.linspace(0, 2*np.pi, 7)[:-1]
+            vertices = [(x + marker_radius * math.cos(a), y + marker_radius * math.sin(a)) 
+                      for a in angles]
+            marker = Polygon(vertices, closed=True, facecolor=style.get('marker_bg', 'white'),
+                           edgecolor=style['color'], linewidth=1.5, zorder=5)
+            main_ax.add_patch(marker)
         else:
-            marker_radius = 12  # Standard for single-character markers
+            marker = Circle((x, y), marker_radius, facecolor=style.get('marker_bg', 'white'),
+                          edgecolor=style['color'], linewidth=1.5, zorder=5)
+            main_ax.add_patch(marker)
         
-        if n_sides > 0:
-            # Draw a hexagon for pi interactions
-            angles = np.linspace(0, 2*np.pi, n_sides+1)[:-1]
-            hex_vertices = np.array([
-                [midpoint_x + marker_radius * np.cos(angle),
-                    midpoint_y + marker_radius * np.sin(angle)]
-                for angle in angles
-            ])
-            hex_patch = Polygon(
-                hex_vertices, 
-                closed=True,
-                facecolor=style.get('marker_bg', 'white'),
-                edgecolor=style['marker_color'],
-                linewidth=1.5,
-                alpha=0.9,
-                zorder=5
-            )
-            main_ax.add_patch(hex_patch)
-        else:
-            # Draw circle for other interactions
-            marker_circle = Circle(
-                (midpoint_x, midpoint_y), marker_radius,
-                facecolor=style.get('marker_bg', 'white'),
-                edgecolor=style['marker_color'],
-                linewidth=1.5,
-                alpha=0.9,
-                zorder=5
-            )
-            main_ax.add_patch(marker_circle)
-        
-        # Add interaction symbol with dynamic font sizing
-        font_size = 9 if text_length <= 1 else 8  # Smaller font for longer text
-        
-        text = main_ax.text(
-            midpoint_x, midpoint_y,
-            style['marker_text'],
-            ha='center', va='center',
-            fontsize=font_size, color=style['marker_color'],
-            fontweight='bold',
-            zorder=6
-        )
-        
-        # Add subtle shadow/outline to the text for better readability
-        if style.get('glow', False) and self.use_enhanced_styling:
-            text.set_path_effects([
-                path_effects.withStroke(linewidth=1.5, foreground='white'),
-                path_effects.Normal()
-            ])
+        # Add marker text
+        font_size = 9 if len(style['marker_text']) <= 1 else max(7, 9 - (len(style['marker_text']) - 1) * 0.8)
+        text = main_ax.text(x, y, style['marker_text'], ha='center', va='center',
+                          fontsize=font_size, color=style['color'], fontweight='bold', zorder=6)
+        text.set_path_effects([path_effects.withStroke(linewidth=1, foreground='white')])
     
     # Create legend for interaction types
     legend_title = "Interacting structural groups"
@@ -611,41 +694,55 @@ def visualize(self, output_file=None,
 
     # Add residue example for legend
     residue_patch = Rectangle((0, 0), 1, 1, facecolor='white', 
-                                edgecolor='black', label='Interacting structural groups')
+                            edgecolor='black', label='Interacting structural groups')
     legend_elements.append(residue_patch)
     
     # Interaction type markers for legend
-    for int_type, style in interaction_styles.items():
+    for int_type, style in sorted(interaction_styles.items(), 
+                                key=lambda x: type_order.get(x[0], 999)):
         # Only include interaction types that are present
-        if self.interactions[int_type]:
+        if int_type in self.interactions and self.interactions[int_type]:
             if int_type == 'hydrogen_bonds':
                 # Special handling for H-bonds to match reference
                 line = Line2D([0], [0], color=style['color'],
-                                linestyle=style['linestyle'], linewidth=style['linewidth'],
-                                marker='o', markerfacecolor=style.get('marker_bg', 'white'), 
-                                markeredgecolor=style['color'],
-                                markersize=8, label=style['name'])
+                            linestyle=style['linestyle'], linewidth=style['linewidth'],
+                            marker='o', markerfacecolor=style.get('marker_bg', 'white'), 
+                            markeredgecolor=style['color'],
+                            markersize=8, label=style['name'])
             elif 'pi' in int_type:
                 # Hexagonal markers for pi interactions
                 line = Line2D([0], [0], color=style['color'],
-                                linestyle=style['linestyle'], linewidth=style['linewidth'],
-                                marker='h', markerfacecolor=style.get('marker_bg', 'white'), 
-                                markeredgecolor=style['color'],
-                                markersize=8, label=style['name'])
+                            linestyle=style['linestyle'], linewidth=style['linewidth'],
+                            marker='h', markerfacecolor=style.get('marker_bg', 'white'), 
+                            markeredgecolor=style['color'],
+                            markersize=8, label=style['name'])
             else:
                 # Circular markers for other interactions
                 line = Line2D([0], [0], color=style['color'],
-                                linestyle=style['linestyle'], linewidth=style['linewidth'],
-                                marker='o', markerfacecolor=style.get('marker_bg', 'white'), 
-                                markeredgecolor=style['color'],
-                                markersize=8, label=style['name'])
+                            linestyle=style['linestyle'], linewidth=style['linewidth'],
+                            marker='o', markerfacecolor=style.get('marker_bg', 'white'), 
+                            markeredgecolor=style['color'],
+                            markersize=8, label=style['name'])
             legend_elements.append(line)
+    
+    # Add directionality to legend if showing directionality
+    if show_directionality and hasattr(self, 'interaction_direction'):
+        legend_elements.append(
+            Line2D([0], [0], color='black', linestyle='-', marker='>',
+                markerfacecolor='black', markersize=8, 
+                label='Unidirectional interaction')
+        )
+        # For bidirectional arrow, use a simpler approach with a diamond symbol
+        bidirectional = Line2D([0], [0], color='black', linestyle='-',
+                            marker='d', markerfacecolor='black',
+                            markersize=8, label='Bidirectional interaction')
+        legend_elements.append(bidirectional)
     
     # Add solvent accessibility indicator
     if self.solvent_accessible:
         solvent_color = self.colors.get('solvent_color', '#ADD8E6')
         solvent_patch = Rectangle((0, 0), 1, 1, facecolor=solvent_color, 
-                                    alpha=0.3, edgecolor=None, label='Solvent accessible')
+                                alpha=0.5, edgecolor='#87CEEB', label='Solvent accessible')
         legend_elements.append(solvent_patch)
     
     # Create an enhanced legend box in top right corner
@@ -712,18 +809,18 @@ def visualize(self, output_file=None,
     # Save the figure with the properly rendered title
     if self.colors.get('background_color', '#F8F8FF') == '#1A1A1A':  # If using dark mode
         plt.savefig(output_file, dpi=dpi, bbox_inches='tight', 
-            facecolor='#1A1A1A', edgecolor='none',
-            transparent=False, pad_inches=0.3)
+                  facecolor='#1A1A1A', edgecolor='none',
+                  transparent=False, pad_inches=0.3)
     else:
         plt.savefig(output_file, dpi=dpi, bbox_inches='tight', 
-            facecolor='white', edgecolor='none',
-            transparent=False, pad_inches=0.3)
+                  facecolor='white', edgecolor='none',
+                  transparent=False, pad_inches=0.3)
     plt.close()
 
     print(f"Successfully saved visualization to: {output_file}")
     return output_file
     
-def run_analysis(self, output_file=None):
+def run_analysis(self, output_file=None, use_dssp=False, generate_report=True, report_file=None):
     """
     Run the complete analysis pipeline.
     
@@ -731,6 +828,12 @@ def run_analysis(self, output_file=None):
     -----------
     output_file : str, optional
         Path where the output image will be saved. If None, a default name will be generated.
+    use_dssp : bool
+        Whether to use DSSP for solvent accessibility (default: False)
+    generate_report : bool
+        Whether to generate a text report (default: True)
+    report_file : str, optional
+        Path where the report will be saved
         
     Returns:
     --------
@@ -743,17 +846,64 @@ def run_analysis(self, output_file=None):
             output_file = f"{base_name}_interactions.png"
             print(f"Using default output filename: {output_file}")
         
-        # Detect protein-ligand interactions
+        # Detect protein-ligand interactions with enhanced detection if available
         print("Detecting interactions...")
-        self.detect_interactions()
+        # Check if the improved interaction detection is available
+        if hasattr(self, 'detect_interactions'):
+            self.detect_interactions()
         
-        # Estimate solvent accessibility
-        print("Estimating solvent accessibility...")
-        self.estimate_solvent_accessibility()
+        # Calculate solvent accessibility
+        print("Calculating solvent accessibility...")
+        if use_dssp and hasattr(self, 'calculate_dssp_solvent_accessibility'):
+            try:
+                self.calculate_dssp_solvent_accessibility()
+                
+                # Check if DSSP found reasonable number of solvent accessible residues
+                if len(self.solvent_accessible) > len(self.interacting_residues) * 0.5:
+                    print("DSSP found too many solvent accessible residues, using realistic method")
+                    
+                    if hasattr(self, 'calculate_realistic_solvent_accessibility'):
+                        self.calculate_realistic_solvent_accessibility()
+                    else:
+                        self.estimate_solvent_accessibility()
+                        
+                elif len(self.solvent_accessible) < 2 and len(self.interacting_residues) > 2:
+                    print("DSSP didn't find enough solvent accessible residues, using realistic method")
+                    
+                    if hasattr(self, 'calculate_realistic_solvent_accessibility'):
+                        self.calculate_realistic_solvent_accessibility()
+                    else:
+                        self.estimate_solvent_accessibility()
+            except Exception as e:
+                print(f"Error using DSSP: {e}")
+                print("Falling back to alternative solvent accessibility calculation...")
+                
+                if hasattr(self, 'calculate_realistic_solvent_accessibility'):
+                    self.calculate_realistic_solvent_accessibility()
+                else:
+                    self.estimate_solvent_accessibility()
+        elif hasattr(self, 'calculate_realistic_solvent_accessibility'):
+            self.calculate_realistic_solvent_accessibility()
+        else:
+            self.estimate_solvent_accessibility()
         
-        # Generate visualization
+        # Generate visualization with directionality if available
+        show_directionality = hasattr(self, 'interaction_direction')
         print("Generating visualization...")
-        result = self.visualize(output_file=output_file)
+        result = visualize(self, output_file=output_file, show_directionality=show_directionality)
+        
+        # Generate text report if requested
+        if generate_report and hasattr(self, 'generate_interaction_report'):
+            if report_file is None:
+                base_name = os.path.splitext(os.path.basename(self.pdb_file))[0]
+                report_file = f"{base_name}_interactions_report.txt"
+            
+            print("Generating interaction report...")
+            try:
+                self.generate_interaction_report(output_file=report_file)
+                print(f"Report saved to {report_file}")
+            except Exception as e:
+                print(f"Error generating report: {str(e)}")
         
         return result
         

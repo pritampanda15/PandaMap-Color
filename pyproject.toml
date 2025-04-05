@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pandamap-color"
-version = "1.0.0"
+version = "2.0.0"
 description = "Versatile visualization tool for protein-ligand interactions with customizable color schemes"
 readme = "README.md"
 authors = [{name = "Pritam Kumar Panda", email = "pritam@stanford.edu"}]
