@@ -1,2 +1,2 @@
 [console_scripts]
-pandamap-color = pandamap_color.cli:main
+pandamap = pandamap.cli:main

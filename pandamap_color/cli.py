@@ -61,6 +61,25 @@ def main():
     parser.add_argument('--figsize', type=float, nargs=2, default=(12, 12),
                       help='Figure size in inches (width height)')
     
+    # New arguments for enhanced functionality
+    parser.add_argument('--generate-report', action='store_true',
+                      help='Generate a detailed interaction report')
+    
+    parser.add_argument('--report-file',
+                      help='Path for the interaction report (default: <pdb_name>_interactions_report.txt)')
+    
+    parser.add_argument('--use-dssp', action='store_true',
+                      help='Use DSSP for solvent accessibility calculation if available')
+    
+    parser.add_argument('--show-directionality', action='store_true',
+                      help='Show interaction directionality with arrows')
+    
+    parser.add_argument('--ionic-cutoff', type=float, default=4.0,
+                      help='Distance cutoff for ionic interactions in Angstroms')
+    
+    parser.add_argument('--halogen-cutoff', type=float, default=3.5,
+                      help='Distance cutoff for halogen bonds in Angstroms')
+    
     # Parse arguments
     args = parser.parse_args()
     
@@ -87,31 +106,70 @@ def main():
             use_enhanced_styling=not args.simple_styling
         )
         
-        # Detect interactions with custom cutoffs
-        print("Detecting interactions...")
-        mapper.detect_interactions(
-            h_bond_cutoff=args.h_bond_cutoff,
-            pi_stack_cutoff=args.pi_stack_cutoff,
-            hydrophobic_cutoff=args.hydrophobic_cutoff
-        )
-        
-        # Estimate solvent accessibility
-        print("Estimating solvent accessibility...")
-        mapper.estimate_solvent_accessibility()
-        
-        # Generate visualization
-        print("Generating visualization...")
-        result = mapper.visualize(
-            output_file=args.output,
-            figsize=args.figsize,
-            dpi=args.dpi,
-            title=args.title,
-            color_by_type=not args.no_color_by_type,
-            jitter=args.jitter
-        )
+        # Check if we should use the enhanced run_analysis method
+        if hasattr(mapper, 'run_analysis') and callable(getattr(mapper, 'run_analysis')):
+            # Use the enhanced run_analysis method with report generation
+            print("Using enhanced analysis pipeline...")
+            result = mapper.run_analysis(
+                output_file=args.output,
+                use_dssp=args.use_dssp,
+                generate_report=args.generate_report,
+                report_file=args.report_file
+            )
+        else:
+            # Fall back to manual step-by-step approach
+            print("Using standard analysis pipeline...")
+            # Detect interactions with custom cutoffs
+            print("Detecting interactions...")
+            mapper.detect_interactions(
+                h_bond_cutoff=args.h_bond_cutoff,
+                pi_stack_cutoff=args.pi_stack_cutoff,
+                hydrophobic_cutoff=args.hydrophobic_cutoff,
+                ionic_cutoff=getattr(args, 'ionic_cutoff', 4.0),
+                halogen_bond_cutoff=getattr(args, 'halogen_cutoff', 3.5)
+            )
+            
+            # Estimate solvent accessibility
+            print("Estimating solvent accessibility...")
+            if args.use_dssp and hasattr(mapper, 'calculate_dssp_solvent_accessibility'):
+                try:
+                    mapper.calculate_dssp_solvent_accessibility()
+                except Exception as e:
+                    print(f"DSSP calculation failed: {e}. Falling back to estimation.")
+                    mapper.estimate_solvent_accessibility()
+            else:
+                mapper.estimate_solvent_accessibility()
+            
+            # Generate visualization
+            print("Generating visualization...")
+            from .visualization import visualize
+            result = visualize(
+                mapper,
+                output_file=args.output,
+                figsize=args.figsize,
+                dpi=args.dpi,
+                title=args.title,
+                color_by_type=not args.no_color_by_type,
+                jitter=args.jitter,
+                show_directionality=args.show_directionality if hasattr(args, 'show_directionality') else False
+            )
+            
+            # Generate report if requested
+            if args.generate_report and hasattr(mapper, 'generate_interaction_report'):
+                report_file = args.report_file
+                if report_file is None:
+                    base_name = os.path.splitext(os.path.basename(args.pdb_file))[0]
+                    report_file = f"{base_name}_interactions_report.txt"
+                
+                print(f"Generating interaction report: {report_file}")
+                try:
+                    mapper.generate_interaction_report(output_file=report_file)
+                    print(f"Report saved to: {report_file}")
+                except Exception as e:
+                    print(f"Error generating report: {e}")
         
         # Check if visualization was successful
-        if result and not result.startswith("Error"):
+        if result and not (isinstance(result, str) and result.startswith("Error")):
             print("✓ Analysis complete!")
             print(f"✓ Visualization saved to: {result}")
             return 0

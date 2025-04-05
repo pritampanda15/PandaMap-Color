@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: pandamap-color
-Version: 2.0.0
+Version: 2.1
 Summary: Versatile visualization tool for protein-ligand interactions with customizable color schemes
 Author-email: Pritam Kumar Panda <pritam@stanford.edu>
 License: MIT
@@ -60,6 +60,18 @@ pip install pandamap-color
 PandaMapColor: Visualize protein-ligand interactions from PDB files with
 customizable styling and coloring options.
 
+pandamap-color -h
+
+usage: pandamap-color [-h] [--output OUTPUT] [--ligand LIGAND] [--dpi DPI] [--title TITLE]
+                      [--color-scheme {default,colorblind,monochrome,dark,publication}] [--custom-colors CUSTOM_COLORS]
+                      [--simple-styling] [--no-color-by-type] [--jitter JITTER] [--h-bond-cutoff H_BOND_CUTOFF]
+                      [--pi-stack-cutoff PI_STACK_CUTOFF] [--hydrophobic-cutoff HYDROPHOBIC_CUTOFF]
+                      [--figsize FIGSIZE FIGSIZE] [--generate-report] [--report-file REPORT_FILE] [--use-dssp]
+                      [--show-directionality] [--ionic-cutoff IONIC_CUTOFF] [--halogen-cutoff HALOGEN_CUTOFF]
+                      pdb_file
+
+PandaMap-Color: Visualize protein-ligand interactions from PDB files with customizable styling and coloring options.
+
 positional arguments:
   pdb_file              Path to PDB file with protein-ligand complex
 
@@ -78,18 +90,25 @@ options:
                         Path to JSON file with custom color scheme
   --simple-styling      Use simple styling instead of enhanced effects
   --no-color-by-type    Disable coloring residues by amino acid type
-  --jitter JITTER       Amount of positional randomization (0.0-1.0) for more
-                        natural look
+  --jitter JITTER       Amount of positional randomization (0.0-1.0) for more natural look
   --h-bond-cutoff H_BOND_CUTOFF
                         Distance cutoff for hydrogen bonds in Angstroms
   --pi-stack-cutoff PI_STACK_CUTOFF
-                        Distance cutoff for pi-stacking interactions in
-                        Angstroms
+                        Distance cutoff for pi-stacking interactions in Angstroms
   --hydrophobic-cutoff HYDROPHOBIC_CUTOFF
-                        Distance cutoff for hydrophobic interactions in
-                        Angstroms
+                        Distance cutoff for hydrophobic interactions in Angstroms
   --figsize FIGSIZE FIGSIZE
                         Figure size in inches (width height)
+  --generate-report     Generate a detailed interaction report
+  --report-file REPORT_FILE
+                        Path for the interaction report (default: <pdb_name>_interactions_report.txt)
+  --use-dssp            Use DSSP for solvent accessibility calculation if available
+  --show-directionality
+                        Show interaction directionality with arrows
+  --ionic-cutoff IONIC_CUTOFF
+                        Distance cutoff for ionic interactions in Angstroms
+  --halogen-cutoff HALOGEN_CUTOFF
+                        Distance cutoff for halogen bonds in Angstroms
 ```
 ### Command Line Usage
 
@@ -108,6 +127,85 @@ pandamap-color path/to/complex.pdb --color-scheme dark -o output_image.png
 
 #Jitter
 pandamap-color path/to/complex.pdb --jitter 0.3 --color-scheme publication -o output_image.png
+
+#Report file
+pandamap-color path/to/complex.pdb  --color-scheme publication -o output_image.png --generate-report
+
+```
+=============================================================================
+PandaMap-Color Interaction Report
+=============================================================================
+
+Ligand: PFL:D:601
+Name: PFL
+Type: LIGAND
+File: complex.pdb
+
+------------------------------
+
+Interacting Chains: D, C
+Interacting Residues: 13
+Solvent Accessible Residues: 6
+
+------------------------------
+
+Interaction Summary:
+  Hydrogen Bonds: 1
+  Hydrophobic Interactions: 4
+  π-π Stacking: 1
+  Carbon-π Interactions: 1
+  Donor-π Interactions: 1
+  Amide-π Interactions: 2
+  Alkyl-π Interactions: 7
+
+------------------------------
+
+Hydrogen Bonds:
+  1. ILE228D -- 2.75Å -- PFL
+
+------------------------------
+
+Hydrophobic Interactions:
+  1. MET286C -- 3.89Å -- PFL
+  2. LEU285C -- 3.95Å -- PFL
+  3. PHE289C (Solvent accessible) -- 3.61Å -- PFL
+  4. MET236D (Solvent accessible) -- 3.55Å -- PFL
+
+------------------------------
+
+π-π Stacking:
+  1. PHE289C (Solvent accessible) -- 3.61Å -- PFL
+
+------------------------------
+
+Carbon-π Interactions:
+  1. PHE289C (Solvent accessible) -- 3.61Å -- PFL
+
+------------------------------
+
+Donor-π Interactions:
+  1. ASP282C (Solvent accessible) -- 3.75Å -- PFL
+
+------------------------------
+
+Amide-π Interactions:
+  1. ASN265C (Solvent accessible) -- 3.69Å -- PFL
+  2. GLN229D (Solvent accessible) -- 3.35Å -- PFL
+
+------------------------------
+
+Alkyl-π Interactions:
+  1. MET286C -- 3.89Å -- PFL
+  2. ILE228D -- 4.06Å -- PFL
+  3. LEU232D -- 4.01Å -- PFL
+  4. PRO233D -- 4.03Å -- PFL
+  5. LEU285C -- 3.95Å -- PFL
+  6. MET261C -- 5.02Å -- PFL
+  7. MET236D (Solvent accessible) -- 3.55Å -- PFL
+
+=============================================================================
+
+```
 
 # Help
 pandamap-color --help

@@ -1,0 +1,72 @@
+=============================================================================
+PandaMap-Color Interaction Report
+=============================================================================
+
+Ligand: PFL:D:601
+Name: PFL
+Type: LIGAND
+File: complex.pdb
+
+------------------------------
+
+Interacting Chains: D, C
+Interacting Residues: 13
+Solvent Accessible Residues: 6
+
+------------------------------
+
+Interaction Summary:
+  Hydrogen Bonds: 1
+  Hydrophobic Interactions: 4
+  π-π Stacking: 1
+  Carbon-π Interactions: 1
+  Donor-π Interactions: 1
+  Amide-π Interactions: 2
+  Alkyl-π Interactions: 7
+
+------------------------------
+
+Hydrogen Bonds:
+  1. ILE228D -- 2.75Å -- PFL
+
+------------------------------
+
+Hydrophobic Interactions:
+  1. MET286C -- 3.89Å -- PFL
+  2. LEU285C -- 3.95Å -- PFL
+  3. PHE289C (Solvent accessible) -- 3.61Å -- PFL
+  4. MET236D (Solvent accessible) -- 3.55Å -- PFL
+
+------------------------------
+
+π-π Stacking:
+  1. PHE289C (Solvent accessible) -- 3.61Å -- PFL
+
+------------------------------
+
+Carbon-π Interactions:
+  1. PHE289C (Solvent accessible) -- 3.61Å -- PFL
+
+------------------------------
+
+Donor-π Interactions:
+  1. ASP282C (Solvent accessible) -- 3.75Å -- PFL
+
+------------------------------
+
+Amide-π Interactions:
+  1. ASN265C (Solvent accessible) -- 3.69Å -- PFL
+  2. GLN229D (Solvent accessible) -- 3.35Å -- PFL
+
+------------------------------
+
+Alkyl-π Interactions:
+  1. MET286C -- 3.89Å -- PFL
+  2. ILE228D -- 4.06Å -- PFL
+  3. LEU232D -- 4.01Å -- PFL
+  4. PRO233D -- 4.03Å -- PFL
+  5. LEU285C -- 3.95Å -- PFL
+  6. MET261C -- 5.02Å -- PFL
+  7. MET236D (Solvent accessible) -- 3.55Å -- PFL
+
+=============================================================================

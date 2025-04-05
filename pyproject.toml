@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pandamap-color"
-version = "2.0.0"
+version = "2.1"
 description = "Versatile visualization tool for protein-ligand interactions with customizable color schemes"
 readme = "README.md"
 authors = [{name = "Pritam Kumar Panda", email = "pritam@stanford.edu"}]
@@ -48,17 +48,7 @@ requires-python = ">=3.7"
 "Documentation" = "https://github.com/pritampanda15/PandaMap-Color/docs"
 
 [project.scripts]
-pandamap-color = "pandamap_color.cli:main"
-
-[tool.setuptools]
-include-package-data = true
-
-[tool.setuptools.packages.find]
-include = ["pandamap_color*"]
-
-[tool.setuptools.package-data]
-"pandamap_color.examples" = ["*.pdb", "*.png"]
-"pandamap_color" = ["*.json", "pandamap-logo.svg"]
+pandamap = "pandamap.cli:main"
 
 [tool.long_description]
 long-description = "file:README.md"
